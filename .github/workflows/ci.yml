@@ -62,8 +62,14 @@ jobs:
             - name: Deploy to staging
               run: |
                   echo "Deploying to staging environment..."
-                  # Add your deployment commands here
-                  echo "Deployment to staging completed successfully."
+
+            - name: Run application
+              run: |
+                  chmod +x myapp
+                  ./myapp
+            - name: Notify on success
+              if: success()
+              run: echo "Deployment to staging completed successfully."
 
             - name: Notify on failure
               if: failure()
@@ -83,9 +89,9 @@ jobs:
               run: |
                   echo "Deploying to production environment..."
                   # Add your deployment commands here
-                  echo "Deployment to production completed successfully."
                   chmod +x myapp
                   ./myapp
+                  echo "Deployment to production completed successfully."
 
             - name: Notify on failure
               if: failure()
