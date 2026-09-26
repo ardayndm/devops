@@ -155,7 +155,25 @@ jobs:
                       exit 1
                   fi
                   chmod +x myapp
-                  ./myapp
+
+                    success=false
+                    for attempt in {1..3}; do
+                        echo "Attempt $attempt: Running the application..."
+                        ./myapp
+                        if [ $? -eq 0 ]; then
+                            echo "Application ran successfully."
+                            success=true
+                            break
+                        else
+                            echo "Application failed to run. Retrying..."
+                            sleep 5
+                        fi
+                    done
+
+                    if [ "$success" = false ]; then
+                        echo "Application failed to run after 3 attempts. Deployment is failed."
+                        exit 1
+                     fi
                   echo "Deployment to production completed successfully."
 
             - name: Notify on failure
