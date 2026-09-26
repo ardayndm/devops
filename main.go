@@ -12,11 +12,11 @@ func Add(a, b int) int {
 
 func main() {
 
-	if rand.Intn(100) < 65 {
-		fmt.Println("Application started successfully (%65!)")
+	if rand.Intn(100) < 55 {
+		fmt.Println("Application started successfully (%55!)")
 		return
 	}
 
-	fmt.Println("Application failed to start (%35!)")
+	fmt.Println("Application failed to start (%45!)")
 	os.Exit(1)
 }

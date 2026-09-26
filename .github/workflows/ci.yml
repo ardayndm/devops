@@ -11,13 +11,17 @@ jobs:
             - name: Get code
               uses: actions/checkout@v4
 
-            - name: Set up Go
+            - name: Set up Golang
               uses: actions/setup-go@v4
               with:
                   go-version: 1.26
 
             - name: Run tests
-              run: go test -v ./...
+              run: go test ./...
+
+            - name: Notify on failure
+              if: failure()
+              run: echo "Tests failed! Please check the logs."
 
     build:
         runs-on: ubuntu-latest
@@ -26,48 +30,68 @@ jobs:
             - name: Get code
               uses: actions/checkout@v4
 
-            - name: Set up Go
+            - name: Set up Golang
               uses: actions/setup-go@v4
               with:
                   go-version: 1.26
 
-            - name: Build
+            - name: Build application
               run: go build -o myapp main.go
 
-            - name: Upload artifact
+            - name: Upload build artifact
               uses: actions/upload-artifact@v4
               with:
-                  name: myapp
+                  name: CorpApp
                   path: myapp
-    deploy-staging:
+
+            - name: Notify on failure
+              if: failure()
+              run: echo "Build failed! Please check the logs."
+
+    staging:
         runs-on: ubuntu-latest
         needs: build
         environment:
             name: staging
         steps:
-            - name: Download artifact
+            - name: Get artifact
               uses: actions/download-artifact@v4
               with:
-                  name: myapp
+                  name: CorpApp
 
             - name: Deploy to staging
               run: |
-                  echo "Deploying to staging..."
+                  echo "Deploying to staging environment..."
                   # Add your deployment commands here
-                  echo "Deployment complete. Bye!"
+                  echo "Deployment to staging completed successfully."
+
+            - name: Notify on failure
+              if: failure()
+              run: echo "Deployment to staging failed! Please check the logs."
+
     deploy:
         runs-on: ubuntu-latest
-        needs: deploy-staging
-        environment:
-            name: production
+        needs: staging
+        environment: production
         steps:
-            - name: Download artifact
+            - name: Get artifact
               uses: actions/download-artifact@v4
               with:
-                  name: myapp
+                  name: CorpApp
 
             - name: Deploy to production
               run: |
-                  echo "Deploying to production..."
+                  echo "Deploying to production environment..."
                   # Add your deployment commands here
-                  echo "Deployment complete. Bye!"
+                  echo "Deployment to production completed successfully."
+
+            - name: Notify on failure
+              if: failure()
+              run: echo "Deployment to production failed! Please check the logs."
+
+            - name: Cleanup
+              if: always()
+              run: |
+                  echo "Cleaning up temporary files..."
+                  # Add your cleanup commands here
+                  echo "Cleanup completed successfully."
