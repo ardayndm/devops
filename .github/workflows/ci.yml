@@ -78,14 +78,14 @@ jobs:
 
             - name: Compare SHA
               run: |
-                    EXPECTED=$(awk '{print $1}' myapp-sum.txt)
-                    ACTUAL=$(awk '{print $1}' myapp-sum-staging.txt)
-                    if [ "$EXPECTED" != "$ACTUAL" ]; then
-                        echo "SHA mismatch! The artifact may be corrupted."
-                        exit 1
-                    else
-                        echo "SHA verified successfully."
-                    fi
+                  EXPECTED=$(awk '{print $1}' myapp-sum.txt)
+                  ACTUAL=$(awk '{print $1}' myapp-sum-staging.txt)
+                  if [ "$EXPECTED" != "$ACTUAL" ]; then
+                      echo "SHA mismatch! The artifact may be corrupted."
+                      exit 1
+                  else
+                      echo "SHA verified successfully."
+                  fi
 
             - name: Show staging info
               run: |
@@ -129,12 +129,19 @@ jobs:
                   name: CorpApp
 
             - name: Deploy to production
+              env:
+                  DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
               run: |
                   echo "Deploying to production environment..."
-                  # Add your deployment commands here
+                  if [ -n "$DEPLOY_TOKEN" ]; then
+                      echo "Using DEPLOY_TOKEN for authentication."
+                  else
+                      echo "DEPLOY_TOKEN is not set. Deployment may fail."
+                  fi
                   chmod +x myapp
                   ./myapp
                   echo "Deployment to production completed successfully."
+                  
 
             - name: Notify on failure
               if: failure()
