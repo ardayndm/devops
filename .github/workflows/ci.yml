@@ -84,6 +84,7 @@ jobs:
                   echo "Deploying to production environment..."
                   # Add your deployment commands here
                   echo "Deployment to production completed successfully."
+                  ./myapp
 
             - name: Notify on failure
               if: failure()
