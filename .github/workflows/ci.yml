@@ -71,7 +71,7 @@ jobs:
             - name: Get SHA artifact
               uses: actions/download-artifact@v4
               with:
-                  name: "CorpApp-${{ github.sha }}"
+                  name: "CorpApp-SHA"
 
             - name: Get SHA
               run: sha256sum myapp > myapp-sum-staging.txt
