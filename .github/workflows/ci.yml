@@ -50,7 +50,7 @@ jobs:
             - name: Upload build artifact
               uses: actions/upload-artifact@v4
               with:
-                  name: CorpApp
+                  name: "CorpApp-${{ github.sha }}"
                   path: myapp
 
             - name: Notify on failure
@@ -66,12 +66,12 @@ jobs:
             - name: Get artifact
               uses: actions/download-artifact@v4
               with:
-                  name: CorpApp
+                  name: "CorpApp-${{ github.sha }}"
 
             - name: Get SHA artifact
               uses: actions/download-artifact@v4
               with:
-                  name: CorpApp-SHA
+                  name: "CorpApp-${{ github.sha }}"
 
             - name: Get SHA
               run: sha256sum myapp > myapp-sum-staging.txt
@@ -126,7 +126,7 @@ jobs:
             - name: Get artifact
               uses: actions/download-artifact@v4
               with:
-                  name: CorpApp
+                  name: "CorpApp-${{ github.sha }}"
 
             - name: Show deployment info
               run: |
@@ -134,7 +134,7 @@ jobs:
                   echo "Deployment to production environment"
                   echo "============================================="
                   echo "Environment: production"
-                  echo "Artifact: CorpApp"
+                  echo "Artifact: CorpApp-${{ github.sha }}"
                   echo "Commit: ${{ github.sha}}"
                   echo "Branch: ${{ github.ref_name}}"
                   echo "Actor: ${{ github.actor}}"
