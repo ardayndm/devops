@@ -59,12 +59,12 @@ jobs:
               with:
                   name: CorpApp
 
-            - name: Show deployment info
+            - name: Show staging info
               run: |
                   echo "============================================="
-                  echo "Deployment to production environment"
+                  echo "Deployment to staging environment"
                   echo "============================================="
-                  echo "Environment: production"
+                  echo "Environment: staging"
                   echo "Artifact: CorpApp"
                   echo "Commit: ${{ github.sha}}"
                   echo "Branch: ${{ github.ref_name}}"
