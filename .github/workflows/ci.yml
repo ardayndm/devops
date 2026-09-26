@@ -128,6 +128,21 @@ jobs:
               with:
                   name: CorpApp
 
+            - name: Show deployment info
+              run: |
+                  echo "============================================="
+                  echo "Deployment to production environment"
+                  echo "============================================="
+                  echo "Environment: production"
+                  echo "Artifact: CorpApp"
+                  echo "Commit: ${{ github.sha}}"
+                  echo "Branch: ${{ github.ref_name}}"
+                  echo "Actor: ${{ github.actor}}"
+                  echo "Repository: ${{ github.repository}}"
+                  echo "Workflow: ${{ github.workflow}}"
+                  echo "Run ID: ${{ github.run_id}}"
+                  echo "============================================="
+
             - name: Deploy to production
               env:
                   DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
@@ -136,12 +151,12 @@ jobs:
                   if [ -n "$DEPLOY_TOKEN" ]; then
                       echo "Using DEPLOY_TOKEN for authentication."
                   else
-                      echo "DEPLOY_TOKEN is not set. Deployment may fail."
+                      echo "DEPLOY_TOKEN is not set. Deployment is failed."
+                      exit 1
                   fi
                   chmod +x myapp
                   ./myapp
                   echo "Deployment to production completed successfully."
-                  
 
             - name: Notify on failure
               if: failure()
