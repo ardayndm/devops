@@ -76,6 +76,10 @@ jobs:
             - name: Get SHA
               run: sha256sum myapp > myapp-sum-staging.txt
 
+            - name: Manipulate SHA for testing
+              run: |
+                    # Simulate a SHA mismatch for testing purposes
+                    echo "Tampared" >> myapp-sum-staging.txt
             - name: Compare SHA
               run: |
                     EXPECTED=$(awk '{print $1}' myapp-sum.txt)
