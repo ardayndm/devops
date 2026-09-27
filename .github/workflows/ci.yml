@@ -95,7 +95,7 @@ jobs:
       - name: Run App
         run: |
           echo "Running the application in staging environment..."
-          docker run --name staging-app -p 8080:8080 ghcr.io/${{ github.repository }}:${{  github.sha }}
+          docker run --name staging-app -d -p 8080:8080 ghcr.io/${{ github.repository }}:${{  github.sha }}
           
       - name: Wait for container health
         run: |
