@@ -95,7 +95,12 @@ jobs:
       - name: Run App
         run: |
           echo "Running the application in staging environment..."
-          docker run --rm ghcr.io/${{ github.repository }}:${{  github.sha }}
+          docker run --name staging-app -p 8080:8080 ghcr.io/${{ github.repository }}:${{  github.sha }}
+          
+      - name: Check container health
+        run: |
+          docker inspect --format='{{.State.Health.Status}}' staging-app
+      
       - name: Notify on failure
         if: failure()
         run: echo "Deployment to staging failed! Please check the logs."

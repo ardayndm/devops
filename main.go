@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math/rand"
+	"net/http"
 	"os"
 )
 
@@ -14,6 +15,14 @@ func main() {
 
 	if rand.Intn(100) <= 55 {
 		fmt.Println("Application started successfully (%55!)")
+		http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+			fmt.Fprintf(w, "Server is healthy!")
+		})
+
+		if err := http.ListenAndServe(":8080", nil); err != nil {
+			fmt.Println("Failed to start server:", err)
+			os.Exit(1)
+		}
 		return
 	}
 
