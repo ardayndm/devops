@@ -97,9 +97,26 @@ jobs:
           echo "Running the application in staging environment..."
           docker run --name staging-app -p 8080:8080 ghcr.io/${{ github.repository }}:${{  github.sha }}
           
-      - name: Check container health
+      - name: Wait for container health
         run: |
-          docker inspect --format='{{.State.Health.Status}}' staging-app
+          for i in {1..12}; do
+            STATUS=$(docker inspect --format='{{.State.Health.Status}}' staging-app)
+            echo "Container health status: $STATUS"
+            if [ "$STATUS" == "healthy" ]; then
+              echo "Container is healthy!"
+              exit 0
+            fi
+
+            if [ "$STATUS" == "unhealthy" ]; then
+              echo "Container is unhealthy!"
+              exit 1
+            fi
+
+            sleep 5
+          done
+          echo "Container did not become healthy in time."
+          docker logs staging-app
+          exit 1
       
       - name: Notify on failure
         if: failure()
