@@ -13,8 +13,9 @@ func Add(a, b int) int {
 
 func main() {
 
-	if rand.Intn(100) <= 70 {
-		fmt.Println("Application started successfully (%70!)")
+	randVal := rand.Intn(100)
+	if randVal <= 70 {
+		fmt.Println("Application started successfully (%70! - Random Value:", randVal, ")")
 		http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(w, "Server is healthy!")
 		})
@@ -26,6 +27,6 @@ func main() {
 		return
 	}
 
-	fmt.Println("Application failed to start (%30!)")
+	fmt.Println("Application failed to start (%30! - Random Value:", randVal, ")")
 	os.Exit(1)
 }
