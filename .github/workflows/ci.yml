@@ -1,188 +1,136 @@
 name: Acme Corp.
 
 on:
-    push:
-        branches:
-            - master
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: read
+  packages: write
+
 jobs:
-    test:
-        runs-on: ubuntu-latest
-        steps:
-            - name: Get code
-              uses: actions/checkout@v4
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get code
+        uses: actions/checkout@v4
 
-            - name: Set up Golang
-              uses: actions/setup-go@v4
-              with:
-                  go-version: 1.26
+      - name: Set up Golang
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.26
 
-            - name: Run tests
-              run: go test ./...
+      - name: Run tests
+        run: go test ./...
 
-            - name: Notify on failure
-              if: failure()
-              run: echo "Tests failed! Please check the logs."
+      - name: Notify on failure
+        if: failure()
+        run: echo "Tests failed! Please check the logs."
 
-    build:
-        runs-on: ubuntu-latest
-        needs: test
-        steps:
-            - name: Get code
-              uses: actions/checkout@v4
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Get code
+        uses: actions/checkout@v4
 
-            - name: Set up Golang
-              uses: actions/setup-go@v4
-              with:
-                  go-version: 1.26
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Build application
-              run: go build -o myapp main.go
+      - name: Build Docker image
+        run: docker build -t ghcr.io/${{ github.repository }}:${{ github.sha }} .
 
-            - name: Get SHA
-              run: sha256sum myapp > myapp-sum.txt
+      - name: Push Docker image
+        run: docker push ghcr.io/${{ github.repository }}:${{ github.sha }}
 
-            - name: Upload SHA artifact
-              uses: actions/upload-artifact@v4
-              with:
-                  name: CorpApp-SHA
-                  path: myapp-sum.txt
+      - name: Notify on failure
+        if: failure()
+        run: echo "Build failed! Please check the logs."
 
-            - name: Upload build artifact
-              uses: actions/upload-artifact@v4
-              with:
-                  name: "CorpApp-${{ github.sha }}"
-                  path: myapp
+  staging:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: staging
+    steps:
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Notify on failure
-              if: failure()
-              run: echo "Build failed! Please check the logs."
+      - name: Pull Docker image
+        run: docker pull ghcr.io/${{ github.repository }}:${{ github.sha }}
 
-    staging:
-        runs-on: ubuntu-latest
-        needs: build
-        environment:
-            name: staging
-        steps:
-            - name: Get artifact
-              uses: actions/download-artifact@v4
-              with:
-                  name: "CorpApp-${{ github.sha }}"
+      - name: Show staging info
+        run: |
+          echo "============================================="
+          echo "Deployment to staging environment"
+          echo "============================================="
+          echo "Environment: staging"
+          echo "Image: ghcr.io/${{ github.repository }}:${{ github.sha }}"
+          echo "Commit: ${{ github.sha}}"
+          echo "Branch: ${{ github.ref_name}}"
+          echo "Actor: ${{ github.actor}}"
+          echo "Repository: ${{ github.repository}}"
+          echo "Workflow: ${{ github.workflow}}"
+          echo "Run ID: ${{ github.run_id}}"
+          echo "============================================="
 
-            - name: Get SHA artifact
-              uses: actions/download-artifact@v4
-              with:
-                  name: "CorpApp-SHA"
+      - name: Run App
+        run: |
+          echo "Running the application in staging environment..."
+          docker run --rm ghcr.io/${{ github.repository }}:${{ github.sha }}
+      - name: Notify on failure
+        if: failure()
+        run: echo "Deployment to staging failed! Please check the logs."
 
-            - name: Get SHA
-              run: sha256sum myapp > myapp-sum-staging.txt
+  deploy:
+    runs-on: ubuntu-latest
+    needs: staging
+    environment: production
+    steps:
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Pull Docker image
+        run: docker pull ghcr.io/${{ github.repository }}:${{ github.sha }}
 
-            - name: Compare SHA
-              run: |
-                  EXPECTED=$(awk '{print $1}' myapp-sum.txt)
-                  ACTUAL=$(awk '{print $1}' myapp-sum-staging.txt)
-                  if [ "$EXPECTED" != "$ACTUAL" ]; then
-                      echo "SHA mismatch! The artifact may be corrupted."
-                      exit 1
-                  else
-                      echo "SHA verified successfully."
-                  fi
+      - name: Show deployment info
+        run: |
+          echo "============================================="
+          echo "Deployment to production environment"
+          echo "============================================="
+          echo "Environment: production"
+          echo "Image: ghcr.io/${{ github.repository }}:${{ github.sha }}"
+          echo "Commit: ${{ github.sha}}"
+          echo "Branch: ${{ github.ref_name}}"
+          echo "Actor: ${{ github.actor}}"
+          echo "Repository: ${{ github.repository}}"
+          echo "Workflow: ${{ github.workflow}}"
+          echo "Run ID: ${{ github.run_id}}"
+          echo "============================================="
+      
+      - name: Run App
+        run: |
+          echo "Running the application in production environment..."
+          docker run --rm ghcr.io/${{ github.repository }}:${{ github.sha }}
+      - name: Notify on failure
+        if: failure()
+        run: echo "Deployment to production failed! Please check the logs."
 
-            - name: Show staging info
-              run: |
-                  echo "============================================="
-                  echo "Deployment to staging environment"
-                  echo "============================================="
-                  echo "Environment: staging"
-                  echo "Artifact: CorpApp"
-                  echo "Commit: ${{ github.sha}}"
-                  echo "Branch: ${{ github.ref_name}}"
-                  echo "Actor: ${{ github.actor}}"
-                  echo "Repository: ${{ github.repository}}"
-                  echo "Workflow: ${{ github.workflow}}"
-                  echo "Run ID: ${{ github.run_id}}"
-                  echo "============================================="
-
-            - name: Deploy to staging
-              run: |
-                  echo "Deploying to staging environment..."
-
-            - name: Run application
-              run: |
-                  chmod +x myapp
-                  ./myapp
-            - name: Notify on success
-              if: success()
-              run: echo "Deployment to staging completed successfully."
-
-            - name: Notify on failure
-              if: failure()
-              run: echo "Deployment to staging failed! Please check the logs."
-
-    deploy:
-        runs-on: ubuntu-latest
-        needs: staging
-        environment: production
-        steps:
-            - name: Get artifact
-              uses: actions/download-artifact@v4
-              with:
-                  name: "CorpApp-${{ github.sha }}"
-
-            - name: Show deployment info
-              run: |
-                  echo "============================================="
-                  echo "Deployment to production environment"
-                  echo "============================================="
-                  echo "Environment: production"
-                  echo "Artifact: CorpApp-${{ github.sha }}"
-                  echo "Commit: ${{ github.sha}}"
-                  echo "Branch: ${{ github.ref_name}}"
-                  echo "Actor: ${{ github.actor}}"
-                  echo "Repository: ${{ github.repository}}"
-                  echo "Workflow: ${{ github.workflow}}"
-                  echo "Run ID: ${{ github.run_id}}"
-                  echo "============================================="
-
-            - name: Deploy to production
-              env:
-                  DEPLOY_TOKEN: ${{ secrets.DEPLOY_TOKEN }}
-              run: |
-                  echo "Deploying to production environment..."
-                  if [ -n "$DEPLOY_TOKEN" ]; then
-                      echo "Using DEPLOY_TOKEN for authentication."
-                  else
-                      echo "DEPLOY_TOKEN is not set. Deployment is failed."
-                      exit 1
-                  fi
-                  chmod +x myapp
-
-                    success=false
-                    for attempt in {1..3}; do
-                        echo "Attempt $attempt: Running the application..."
-                        ./myapp
-                        if [ $? -eq 0 ]; then
-                            echo "Application ran successfully."
-                            success=true
-                            break
-                        else
-                            echo "Application failed to run. Retrying..."
-                            sleep 5
-                        fi
-                    done
-
-                    if [ "$success" = false ]; then
-                        echo "Application failed to run after 3 attempts. Deployment is failed."
-                        exit 1
-                     fi
-                  echo "Deployment to production completed successfully."
-
-            - name: Notify on failure
-              if: failure()
-              run: echo "Deployment to production failed! Please check the logs."
-
-            - name: Cleanup
-              if: always()
-              run: |
-                  echo "Cleaning up temporary files..."
-                  # Add your cleanup commands here
-                  echo "Cleanup completed successfully."
+      - name: Cleanup
+        if: always()
+        run: |
+          echo "Cleaning up temporary files..."
+          # Add your cleanup commands here
+          echo "Cleanup completed successfully."
