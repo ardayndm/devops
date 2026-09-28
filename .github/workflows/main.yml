@@ -17,7 +17,11 @@ jobs:
           chmod 600 ~/.ssh/ec2_key
 
           ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts
-
+      - name: Validate SSH key
+        run: |
+          ssh-keygen -y -f "$HOME/.ssh/ec2_key" > /tmp/public_key
+          echo "SSH private key format is valid."
+    
       - name: Test SSH connection
         run: |
           ssh \
