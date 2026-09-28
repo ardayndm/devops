@@ -93,6 +93,7 @@ jobs:
 
                       if [ "$STATUS" == "unhealthy" ]; then
                           echo "Container is unhealthy..!"
+                          docker logs staging-app
                           exit 1
                       fi
 
@@ -137,6 +138,7 @@ jobs:
 
                       if [ "$STATUS" == "unhealthy" ]; then
                           echo "Container is unhealthy..!"
+                          docker logs production-app
                           exit 1
                       fi
 
