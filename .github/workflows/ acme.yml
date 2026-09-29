@@ -127,7 +127,7 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             IMAGE="ghcr.io/${{ github.repository }}:${{ github.sha }}"
-            OLD_IMAGE=$(docker inspect --format='{{.Config.Image}}' acme-corp 2>dev/null || true)
+            OLD_IMAGE=$(docker inspect --format='{{.Config.Image}}' acme-corp)
             echo "Previous Image captured: $OLD_IMAGE"
             echo "Deploying $IMAGE"
             docker pull $IMAGE
