@@ -127,6 +127,8 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             IMAGE="ghcr.io/${{ github.repository }}:${{ github.sha }}"
+            OLD_IMAGE=$(docker inspect --format='{{.Config.Image}}' acme-corp 2>dev/null || true)
+            echo "Previous Image captured: $OLD_IMAGE"
             echo "Deploying $IMAGE"
             docker pull $IMAGE
             docker stop acme-corp || true
@@ -161,6 +163,46 @@ jobs:
 
             echo "Deployment did not become stable."
             docker logs acme-corp
+
+            # ---- ROLLBACK
+
+            echo "Rollback starting..."
+
+            if [ -z "$OLD_IMAGE" ]; then
+              echo "Rollback image not found."
+              exit 1
+            fi
+
+            docker stop acme-corp || true
+            docker rm acme-corp || true
+            docker run -d -p 8080:8080 --name acme-corp --restart unless-stopped "$OLD_IMAGE"
+
+            HEALTHY_COUNT=0
+
+            for i in {1..12}; do
+              RESULT=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}starting{{end}}' acme-corp)
+
+              echo "Rollback Container Health Status: $RESULT"
+
+              if [ "$RESULT" = "healthy" ]; then 
+                HEALTHY_COUNT=$((HEALTHY_COUNT + 1))
+                echo "Rollback Healthy check: $HEALTHY_COUNT/4"
+
+                if [ "$HEALTHY_COUNT" -eq 4 ]; then
+                  echo "Rollback Deployment successful and stable!"
+                  exit 1  # Rollback'e düştüğü için istenen deployment başarısız, Bu sebepten exit 1
+                fi
+              else
+                HEALTHY_COUNT=0
+              fi
+
+              if [ "$RESULT" = "unhealthy" ]; then
+                echo "Rollback Container is unhealthy!"
+              fi
+
+              sleep 5
+            done
+
             exit 1
       - name: Notify on failure
         if: failure()
