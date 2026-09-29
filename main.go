@@ -14,6 +14,7 @@ func Add(a, b int) int {
 func main() {
 
 	randVal := rand.Intn(100)
+	
 	if randVal <= 70 {
 		fmt.Println("Application started successfully (%70! - Random Value:", randVal, ")")
 		http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
