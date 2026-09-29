@@ -132,26 +132,34 @@ jobs:
             docker stop acme-corp || true
             docker rm acme-corp || true
             docker run -d -p 8080:8080 --name acme-corp --restart unless-stopped $IMAGE
-            
-            for i in {1..4}; do
-              RESULT=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}starting{{end}}' acme-corp)
-              echo "Container Health status : $RESULT"
 
-              if [ "$RESULT" = "healthy" ]; then
-                  echo "Deployment completed, App is healthy!"
+            HEALTHY_COUNT=0
+
+            for i in {1..12}; do
+              RESULT=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}starting{{end}}' acme-corp)
+
+              echo "Container Health Status: $HEALTH"
+
+              if [ "$RESULT" = "healthy" ]; then 
+                HEALTHY_COUNT=$((HEALTHY_COUNT + 1))
+                echo "Healthy check: $HEALTHY_COUNT/4"
+
+                if [ "$HEALTHY_COUNT" -eq 4 ]; then
+                  echo "Deployment successful and stable!"
                   exit 0
+                fi
+              else
+                HEALTHY_COUNT=0
               fi
 
               if [ "$RESULT" = "unhealthy" ]; then
-                  echo "Deployment failed because app is unhealthy!"
-                  docker logs acme-corp
-                  exit 1
+                echo "Container is unhealthy!"
               fi
 
               sleep 5
             done
 
-            echo "App response not received in given duration..."
+            echo "Deployment did not become stable."
             docker logs acme-corp
             exit 1
       - name: Notify on failure
