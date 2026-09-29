@@ -129,10 +129,31 @@ jobs:
             IMAGE="ghcr.io/${{ github.repository }}:${{ github.sha }}"
             echo "Deploying $IMAGE"
             docker pull $IMAGE
-            docker stop acme-app || true
-            docker rm acme-app || true
-            docker run -d -p 8080:8080 --name acme-app --restart unless-stopped $IMAGE
-            echo "Deployment completed."
+            docker stop acme-corp || true
+            docker rm acme-corp || true
+            docker run -d -p 8080:8080 --name acme-corp --restart unless-stopped $IMAGE
+            
+            for i in {1..4}; do
+              RESULT=$(docker inspect --format='{{.State.Health.Status}}' acme-corp)
+              echo "Container Health status : $RESULT"
+
+              if [ "$RESULT" = "healthy" ]; then
+                  echo "Deployment completed, App is healthy!"
+                  exit 0
+              fi
+
+              if [ "$RESULT" = "unhealthy" ]; then
+                  echo "Deployment failed because app is unhealthy!"
+                  docker logs
+                  exit 1
+              fi
+
+              sleep 5
+            done
+
+            echo "App response not received in given duration..."
+            docker logs acme-corp
+            exit 1
       - name: Notify on failure
         if: failure()
         run: echo "Deployment to production failed! Please check the logs."
