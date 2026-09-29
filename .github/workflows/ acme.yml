@@ -1,159 +1,144 @@
 name: Acme Corp.
 
 on:
-    push:
-        branches:
-            - master
-    workflow_dispatch:
-        inputs:
-            image_tag:
-                description: "Docker image tag to deploy (Rollback)"
-                required: true
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Docker image tag to deploy (Rollback)"
+        required: true
 
 permissions:
-    contents: read
-    packages: write
+  contents: read
+  packages: write
 
 jobs:
-    test:
-        if: github.event_name == 'push'
-        runs-on: ubuntu-latest
-        steps:
-            - name: Get code
-              uses: actions/checkout@v4
+  test:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get code
+        uses: actions/checkout@v4
 
-            - name: Set up Golang
-              uses: actions/setup-go@v4
-              with:
-                  go-version: 1.26
+      - name: Set up Golang
+        uses: actions/setup-go@v4
+        with:
+          go-version: 1.26
 
-            - name: Run tests
-              run: go test ./...
+      - name: Run tests
+        run: go test ./...
 
-            - name: Notify on failure
-              if: failure()
-              run: echo "Tests failed! Please check the logs."
+      - name: Notify on failure
+        if: failure()
+        run: echo "Tests failed! Please check the logs."
 
-            - name: Cleanup
-              if: always()
-              run: echo "Cleaning up resources after tests."
+      - name: Cleanup
+        if: always()
+        run: echo "Cleaning up resources after tests."
 
-    build:
-        if: github.event_name == 'push'
-        runs-on: ubuntu-latest
-        needs: test
+  build:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    needs: test
 
-        steps:
-            - name: Get code
-              uses: actions/checkout@v4
+    steps:
+      - name: Get code
+        uses: actions/checkout@v4
 
-            - name: Login to GHCR
-              uses: docker/login-action@v3
-              with:
-                  registry: ghcr.io
-                  username: ${{ github.actor }}
-                  password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-            - name: Build Docker image
-              run: docker build -t ghcr.io/${{ github.repository }}:${{ github.sha }} .
+      - name: Build Docker image
+        run: docker build -t ghcr.io/${{ github.repository }}:${{ github.sha }} .
 
-            - name: Push Docker image
-              run: docker push ghcr.io/${{ github.repository }}:${{  github.sha }}
+      - name: Push Docker image
+        run: docker push ghcr.io/${{ github.repository }}:${{  github.sha }}
 
-            - name: Notify on failure
-              if: failure()
-              run: echo "Build failed! Please check the logs."
+      - name: Notify on failure
+        if: failure()
+        run: echo "Build failed! Please check the logs."
 
-            - name: Cleanup
-              if: always()
-              run: echo "Cleaning up resources after build."
+      - name: Cleanup
+        if: always()
+        run: echo "Cleaning up resources after build."
 
-    staging:
-        if: github.event_name == 'push'
-        runs-on: ubuntu-latest
-        needs: build
-        environment: staging
-        steps:
-            - name: Get Image
-              run: docker pull ghcr.io/${{ github.repository }}:${{  github.sha }}
+  staging:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    needs: build
+    environment: staging
+    steps:
+      - name: Get Image
+        run: docker pull ghcr.io/${{ github.repository }}:${{  github.sha }}
 
-            - name: Run Image
-              run: docker run -d -p 8080:8080 --name staging-app ghcr.io/${{ github.repository }}:${{  github.sha }}
+      - name: Run Image
+        run: docker run -d -p 8080:8080 --name staging-app ghcr.io/${{ github.repository }}:${{  github.sha }}
 
-            - name: Check container health
-              run: |
-                  for i in {1..4}; do
-                      STATUS=$(docker inspect --format='{{.State.Health.Status}}' staging-app)
-                      echo "Container health status: $STATUS"
+      - name: Check container health
+        run: |
+          for i in {1..4}; do
+              STATUS=$(docker inspect --format='{{.State.Health.Status}}' staging-app)
+              echo "Container health status: $STATUS"
 
-                      if [ "$STATUS" == "healthy" ]; then
-                          echo "Container is healthy!"
-                          exit 0
-                      fi
+              if [ "$STATUS" == "healthy" ]; then
+                  echo "Container is healthy!"
+                  exit 0
+              fi
 
-                      if [ "$STATUS" == "unhealthy" ]; then
-                          echo "Container is unhealthy..!"
-                          docker logs staging-app
-                          exit 1
-                      fi
-
-                      sleep 5
-                  done
-                  echo "Container did not become healthy in time."
+              if [ "$STATUS" == "unhealthy" ]; then
+                  echo "Container is unhealthy..!"
                   docker logs staging-app
                   exit 1
+              fi
 
-            - name: Notify on failure
-              if: failure()
-              run: echo "Deployment to staging failed! Please check the logs."
+              sleep 5
+          done
+          echo "Container did not become healthy in time."
+          docker logs staging-app
+          exit 1
 
-            - name: Cleanup
-              if: always()
-              run: |
-                  docker stop staging-app || true
-                  docker rm staging-app || true
+      - name: Notify on failure
+        if: failure()
+        run: echo "Deployment to staging failed! Please check the logs."
 
-    deploy:
-        if: always() && (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && needs.staging.result == 'success'))
-        needs: staging
-        runs-on: ubuntu-latest
-        environment: production
-        steps:
-            - name: Get Image
-              run: docker pull ghcr.io/${{ github.repository }}:${{ github.event.inputs.image_tag || github.sha }}
+      - name: Cleanup
+        if: always()
+        run: |
+          docker stop staging-app || true
+          docker rm staging-app || true
 
-            - name: Run Image
-              run: docker run -d -p 8080:8080 --name production-app ghcr.io/${{ github.repository }}:${{ github.event.inputs.image_tag || github.sha }}
+  deploy:
+    if: needs.staging.result == 'success'
+    needs: staging
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_KEY }}
+          script: |
+            IMAGE="ghcr.io/${{ github.repository }}:${{ github.sha }}"
+            echo "Deploying $IMAGE"
+            docker pull $IMAGE
+            docker stop acme-app || true
+            docker rm acme-app || true
+            docker run -d -p 8080:8080 --name acme-app --restart unless-stopped $IMAGE
+            echo "Deployment completed."
+      - name: Notify on failure
+        if: failure()
+        run: echo "Deployment to production failed! Please check the logs."
 
-            - name: Check container health
-              run: |
-                  for i in {1..4}; do
-                      STATUS=$(docker inspect --format='{{.State.Health.Status}}' production-app)
-                      echo "Container health status: $STATUS"
-
-                      if [ "$STATUS" == "healthy" ]; then
-                          echo "Container is healthy!"
-                          exit 0
-                      fi
-
-                      if [ "$STATUS" == "unhealthy" ]; then
-                          echo "Container is unhealthy..!"
-                          docker logs production-app
-                          exit 1
-                      fi
-
-                      sleep 5
-                  done
-                  echo "Container did not become healthy in time."
-                  docker logs production-app
-                  exit 1
-
-            - name: Notify on failure
-              if: failure()
-              run: echo "Deployment to production failed! Please check the logs."
-
-            - name: Cleanup
-              if: always()
-              run: |
-                  docker stop production-app || true
-                  docker rm production-app || true
+      - name: Cleanup
+        if: always()
+        run: |
+          docker stop production-app || true
+          docker rm production-app || true
