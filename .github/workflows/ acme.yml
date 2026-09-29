@@ -134,7 +134,7 @@ jobs:
             docker run -d -p 8080:8080 --name acme-corp --restart unless-stopped $IMAGE
             
             for i in {1..4}; do
-              RESULT=$(docker inspect --format='{{.State.Health.Status}}' acme-corp)
+              RESULT=$(docker inspect --format='{{if .State.Health}}{{.State.Health.Status}}{{else}}starting{{end}}' acme-corp)
               echo "Container Health status : $RESULT"
 
               if [ "$RESULT" = "healthy" ]; then
