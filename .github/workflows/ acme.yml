@@ -124,7 +124,7 @@ jobs:
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_KEY }}
+          key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             IMAGE="ghcr.io/${{ github.repository }}:${{ github.sha }}"
             echo "Deploying $IMAGE"
@@ -136,9 +136,3 @@ jobs:
       - name: Notify on failure
         if: failure()
         run: echo "Deployment to production failed! Please check the logs."
-
-      - name: Cleanup
-        if: always()
-        run: |
-          docker stop production-app || true
-          docker rm production-app || true
