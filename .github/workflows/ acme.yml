@@ -144,7 +144,7 @@ jobs:
 
               if [ "$RESULT" = "unhealthy" ]; then
                   echo "Deployment failed because app is unhealthy!"
-                  docker logs
+                  docker logs acme-corp
                   exit 1
               fi
 
