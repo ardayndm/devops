@@ -133,7 +133,7 @@ jobs:
             docker pull $IMAGE
             docker stop acme-corp || true
             docker rm acme-corp || true
-            docker run -d -p 8080:8080 --name acme-corp --restart unless-stopped $IMAGE
+            docker run -d -p 8080:8080 --name acme-corp --restart unless-stopped --health-cmd="curl -f http://localhost:9999/health || exit 1" $IMAGE
 
             HEALTHY_COUNT=0
 
